@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("ComputerGraphicsLab3Paint")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+ca2a272f6a10cd56e6b187ee73ba3ffae281b4b8")]
 [assembly: System.Reflection.AssemblyProductAttribute("ComputerGraphicsLab3Paint")]
 [assembly: System.Reflection.AssemblyTitleAttribute("ComputerGraphicsLab3Paint")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

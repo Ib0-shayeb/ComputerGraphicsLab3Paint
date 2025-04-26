@@ -1,38 +1,77 @@
 using System;
 using System.Collections.Generic;
-using Avalonia;
+
 using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Media;
 using Avalonia.Collections;
-using Avalonia.Controls.Shapes;
 using System.Linq;
 using System.Collections.ObjectModel;
 using Avalonia.Media.Imaging;
 using Avalonia.Platform;
 using System.Runtime.InteropServices;
+using System.Drawing;
+using Avalonia;
+using System.Numerics;
 
 namespace ComputerGraphicsLab3Paint
 {
     public class CanvasBitmap : WriteableBitmap
     {
         public ObservableCollection<Line> Lines { get; } = new();
-        int Height {get;}
-        int Width {get;}
-        MyColor backgroundColor {get; set;}
+        public ObservableCollection<Circle> Circles { get; } = new();
+        public ObservableCollection<Polygon> Polygons { get; } = new();
+        public int Height {get;}
+        public int Width {get;}
+        public MyColor backgroundColor {get; set;} = new MyColor(220, 220, 220);
+        public bool _AntiAliasingOn;
+        public bool AntiAliasingOn {
+            get => _AntiAliasingOn;
+            set{
+                _AntiAliasingOn = value;
+                
+            }
+        }
+        public CanvasBitmap(CanvasData cd)
+            : base(
+            new PixelSize(cd.Width, cd.Height),      // Width x Height
+            new Avalonia.Vector(96, 96),                // DPI
+            PixelFormat.Bgra8888,              // Format
+            Avalonia.Platform.AlphaFormat.Opaque              // Alpha
+        )
+        {   
+            Height = cd.Height;
+            Width = cd.Width;
+            AntiAliasingOn = cd.AntiAliasingOn;
+            backgroundColor = new MyColor(cd.backgroundColor.R, cd.backgroundColor.G, cd.backgroundColor.B);
+            foreach (var circle in cd.Circles)
+            {
+                Circles.Add(new Circle(circle));
+            }
+            foreach (var line in cd.Lines)
+            {
+                Lines.Add(new Line(line));
+            }
+            foreach (var pol in cd.Polygons)
+            {
+                Polygons.Add(new Polygon(pol));
+            }
 
+            Redraw();
+        }
         public CanvasBitmap(int height, int width)
             : base(
             new PixelSize(width, height),      // Width x Height
-            new Vector(96, 96),                // DPI
+            new Avalonia.Vector(96, 96),                // DPI
             PixelFormat.Bgra8888,              // Format
             Avalonia.Platform.AlphaFormat.Opaque              // Alpha
         )
         {   
             Height = height;
             Width = width;
+            AntiAliasingOn = true;
 
-            SetBackground(new MyColor(200, 200, 200));
+            SetBackground(new MyColor(220, 220, 220));
         }
 
         public void SetBackground(MyColor color){
@@ -56,20 +95,22 @@ namespace ComputerGraphicsLab3Paint
                 Marshal.Copy(buffer, 0, fb.Address, buffer.Length);
             }
         }
-        public void AddLine(Point p1, Point p2)
-        {   
-            var line = new Line
-            {
-                StartPoint = p1,
-                EndPoint = p2,
-                Stroke = Brushes.Blue,
-                StrokeThickness = 2
-            };
-            Lines.Add(line);
-            //UPDATE BITMAP
+        public void AddLine(System.Drawing.Point p1, System.Drawing.Point p2, int Thickness, MyColor c)
+        {    
+            Lines.Add(new Line(p1, p2, new MyColor(c.R, c.G, c.B), Thickness));
             Redraw();
         }
-        private void Redraw(){//update canvas
+        public void AddPolygon(List<System.Drawing.Point> points, int Thickness, MyColor c)
+        {    
+            Polygons.Add(new Polygon(points, new MyColor(c.R, c.G, c.B), Thickness));
+            Redraw();
+        }
+        public void AddCircle(System.Drawing.Point p1, System.Drawing.Point p2, MyColor c)
+        {    
+            Circles.Add(new Circle(p1, euclidianDistance(p1, p2), c));
+            Redraw();
+        }
+        public void Redraw(){//update canvas
             var buffer = new byte [Height * Width * 4];
 
             for (int y = 0; y < Height; y++)
@@ -84,10 +125,25 @@ namespace ComputerGraphicsLab3Paint
                 }
             } 
 
-            MyColor c = new MyColor(0, 0, 0);
             foreach (var line in Lines)
             {
-                DrawLine(line.StartPoint, line.EndPoint, buffer, c);
+                if(AntiAliasingOn){
+                    line.GuptaSproullsDraw(buffer, Width, Height, backgroundColor);
+                } else {
+                    line.Draw(buffer, Width, Height);
+                }
+            }
+            foreach (var poly in Polygons)
+            {
+                if(AntiAliasingOn){
+                    poly.GuptaSproullsDraw(buffer, Width, Height, backgroundColor);
+                } else {
+                    poly.Draw(buffer, Width, Height);
+                }
+            }
+            foreach (var circle in Circles)
+            {
+                circle.Draw(buffer, Width, Height);
             }
 
             using (var fb = this.Lock())
@@ -95,68 +151,186 @@ namespace ComputerGraphicsLab3Paint
                 Marshal.Copy(buffer, 0, fb.Address, buffer.Length);
             }
         }
-        private void DrawCircle(Point p, double r, byte[] buffer, MyColor c){
-            
-        }
-        private void DrawLine(Point p1, Point p2, byte[] buffer, MyColor c){
-            double dy = p1.Y - p2.Y;
-            double dx = p1.X - p2.X;
-
-            //to avoid div by 0
-            if(dx == 0){
-                if(p1.Y < p2.Y){
-                    for(int y = (int)p1.Y; y < p2.Y; y++){
-                        DrawPixel((int)p1.X, (int)y, buffer, c);
-                    }
-                } else {
-                    for(int y = (int)p2.Y; y < p1.Y; y++){
-                        DrawPixel((int)p1.X, (int)y, buffer, c);
-                    }
+        public (int index, int shape) whichShape(System.Drawing.Point clickPoint){//update canvas
+            int shape;
+            for (int k = 0; k < Lines.Count(); k++)
+            {
+                if(Lines[k].isHovered(clickPoint)){
+                    shape = 0;
+                    return (k, shape);
                 }
             }
-            
-            double m = dy/dx;
-            
-            if(p1.X < p2.X){
-                double y = p1.Y;
-                for(int x = (int)p1.X; x < p2.X; x++){
-                    //draw
-                    DrawPixel(x, (int)y, buffer, c);
-                    y += m;
-                }
-            } else {
-                double y = p2.Y;
-                for(int x = (int)p2.X; x < p1.X; x++){
-                    //draw
-                    DrawPixel(x, (int)y, buffer, c);
-                    y += m;
+            for (int k = 0; k < Polygons.Count(); k++)
+            {
+                if(Polygons[k].isHovered(clickPoint)){
+                    shape = 2;
+                    return (k, shape);
                 }
             }
-        }
-        private void DrawPixel(int x, int y, byte[] buffer, MyColor c){
-            if(x < 0 || x >= Width || y < 0 || y >= Height) return;
+            for (int k = 0; k < Circles.Count(); k++)
+            {
+                if(Circles[k].isHovered(clickPoint)){
+                    shape = 1;
+                    return (k, shape);
+                }
+            }
+            return (-1, -1);
 
-            int index = y * Width * 4 + x * 4;
-            buffer[index] = c.B;
-            buffer[index + 1] = c.G;
-            buffer[index + 2] = c.R;
         }
-        // private void CreateHandles()
-        // {
-        //     foreach (var point in _polyline.Points)
-        //     {
-        //         var handle = new Ellipse
-        //         {
-        //             Width = 10,
-        //             Height = 10,
-        //             Fill = Brushes.Red,
-        //             [Canvas.LeftProperty] = point.X - 5,
-        //             [Canvas.TopProperty] = point.Y - 5
-        //         };
+        public static int euclidianDistance(System.Drawing.Point p1, System.Drawing.Point p2){
+            var dx = p2.X - p1.X;
+            var dy = p2.Y - p1.Y;
+            return (int)Math.Sqrt(dx * dx + dy * dy);
+        }
 
-        //         _handles.Add(handle);
-        //         Children.Add(handle);
-        //     }
-        // }
+        public bool DeleteShape(int index, int shape)
+        {
+            bool removed = false;
+            switch (shape)
+            {
+                case 0:
+                    if(index < 0 || index >= Lines.Count())
+                        break;
+                    Lines.RemoveAt(index);
+                    removed = true; 
+                    Redraw();
+                    break;
+                case 1:
+                    if(index < 0 || index >= Circles.Count())
+                        break;
+                    Circles.RemoveAt(index); 
+                    removed = true; 
+                    Redraw();  
+                    break;
+                case 2:
+                    if(index < 0 || index >= Polygons.Count())
+                        break;
+                    Polygons.RemoveAt(index); 
+                    removed = true;   
+                    Redraw();
+                    break; 
+            }
+            return removed;
+        }
+        public bool ChangeThickness(int index, int shape, int t)
+        {
+            bool applied = false;
+            switch (shape)
+            {
+                case 0:
+                    if(index < 0 || index >= Lines.Count())
+                        break;
+                    Lines[index].Thickness = t;
+                    applied = true; 
+                    Redraw();
+                    break;
+                case 2:
+                    if(index < 0 || index >= Polygons.Count())
+                        break;
+                    Polygons[index].Thickness = t; 
+                    applied = true;   
+                    Redraw();
+                    break; 
+            }
+            return applied;
+        }
+        public bool ChangeColor(int index, int shape, MyColor c)
+        {
+            bool applied = false;
+            switch (shape)
+            {
+                case 0:
+                    if(index < 0 || index >= Lines.Count())
+                        break;
+                    Lines[index].Color = new MyColor(c.R, c.G, c.B);
+                    applied = true; 
+                    Redraw();
+                    break;
+                case 1:
+                    if(index < 0 || index >= Circles.Count())
+                        break;
+                    Circles[index].Color = new MyColor(c.R, c.G, c.B);
+                    applied = true; 
+                    Redraw();  
+                    break;
+                case 2:
+                    if(index < 0 || index >= Polygons.Count())
+                        break;
+                    Polygons[index].setColor(new MyColor(c.R, c.G, c.B));
+                    applied = true;   
+                    Redraw();
+                    break; 
+            }
+            return applied;
+        }
+        public bool MoveShape(int index, int shape, System.Drawing.Point p1, System.Drawing.Point p2)
+        {
+            bool applied = false;
+            int dx = p2.X - p1.X;
+            int dy = p2.Y - p1.Y;
+            switch (shape)
+            {
+                case 0:
+                    if(index < 0 || index >= Lines.Count())
+                        break;
+                    Lines[index].Move(dx, dy);
+                    applied = true; 
+                    Redraw();
+                    break;
+                case 1:
+                    if(index < 0 || index >= Circles.Count())
+                        break;
+                    Circles[index].Move(dx, dy);
+                    applied = true;   
+                    Redraw();
+                    break; 
+                case 2:
+                    if(index < 0 || index >= Polygons.Count())
+                        break;
+                    Polygons[index].Move(dx, dy);
+                    applied = true;   
+                    Redraw();
+                    break; 
+            }
+            return applied;
+        }
+        public bool StrechShape(int index, int shape, System.Drawing.Point p1, System.Drawing.Point p2)
+        {
+            bool applied = false;
+            int dx = p2.X - p1.X;
+            int dy = p2.Y - p1.Y;
+            switch (shape)
+            {
+                case 0:
+                    if(index < 0 || index >= Lines.Count())
+                        break;
+                    Lines[index].Strech(p1, p2);
+                    applied = true; 
+                    Redraw();
+                    break;
+                case 1:
+                    if(index < 0 || index >= Circles.Count())
+                        break;
+                    Circles[index].Strech(p1, p2);
+                    applied = true;   
+                    Redraw();
+                    break; 
+                case 2:
+                    if(index < 0 || index >= Polygons.Count())
+                        break;
+                    Polygons[index].Strech(p1, p2);
+                    applied = true;   
+                    Redraw();
+                    break; 
+            }
+            return applied;
+        }
+
+        public void ClearAll()
+        {
+            Lines.Clear();
+            Circles.Clear();
+            Polygons.Clear();
+        }
     }
 }

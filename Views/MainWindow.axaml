@@ -7,14 +7,53 @@
         x:Class="ComputerGraphicsLab3Paint.Views.MainWindow"
         x:DataType="vm:MainWindowViewModel"
         Icon="/Assets/avalonia-logo.ico"
-        Title="ComputerGraphicsLab3Paint">
+        Title="ComputerGraphicsLab3Paint"
+        Name="window">
 
     <Design.DataContext>
         <!-- This only sets the DataContext for the previewer in an IDE,
              to set the actual DataContext for runtime, set the DataContext property in code (look at App.axaml.cs) -->
         <vm:MainWindowViewModel/>
     </Design.DataContext>
+    
+    <Grid RowDefinitions="40, Auto"  Margin="4">
 
-    <TextBlock Text="{Binding Greeting}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+        <!-- ToolBar at the top -->
+        <StackPanel Orientation="Horizontal" Background="LightGray" Height="40">
+            <Button Content="Open" Click="OnOpenClick"/>
+            <Button Content="Save" Click="OnSaveClick"/>
+            <Button Content="Delete" Click="OnDleteClick"/>
+            <Button Content="Line" Click="OnSetLineClick"/>
+            <Button Content="Circle" Click="OnSetCircleClick"/>
+            <Button Content="Polygon" Click="OnSetPolygonClick"/>
+
+            <Button Content="ChangeThickness" Click="OnChangeThicknessClick"/>
+            <TextBlock>Thickness: </TextBlock>
+            <NumericUpDown Minimum="1" Maximum="30" Value="{Binding Thickness, Mode=TwoWay}" />
+            
+            <Button Content="Color" Click="OnChangeColorClick"/>
+            <TextBlock>Red: </TextBlock>
+            <NumericUpDown Minimum="0" Maximum="255" Value="{Binding clr.R, Mode=TwoWay}" />
+            <TextBlock>Green: </TextBlock>
+            <NumericUpDown Minimum="0" Maximum="255" Value="{Binding clr.G, Mode=TwoWay}" />
+            <TextBlock>Blue: </TextBlock>
+            <NumericUpDown Minimum="0" Maximum="255" Value="{Binding clr.B, Mode=TwoWay}" />
+
+            <Button Content="ClearAll" Click="OnClearAllClick"/>
+            <Button Content="MoveShape" Click="OnMoveShapeClick"/>
+            <Button Content="StrechShape" Click="OnStrechShapeClick"/>
+            <ToggleSwitch IsChecked="{Binding canvas.AntiAliasingOn}"
+                            />
+            <Button Content="Redraw" Click="OnRedrawClick"/>
+        </StackPanel>
+
+        <Image Grid.Row="1" Source="{Binding canvas}"
+            Name="ImageCanvas"
+            Width="{Binding canvas.Size.Width}"
+            Height="{Binding canvas.Size.Height}"
+            PointerPressed="Image_PointerPressed"
+            />
+
+    </Grid>
 
 </Window>

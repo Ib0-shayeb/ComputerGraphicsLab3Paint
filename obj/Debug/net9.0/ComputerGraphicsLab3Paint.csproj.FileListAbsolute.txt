@@ -59,6 +59,7 @@
 /home/actuallynotbillgates/Documents/ComputerGraphicsLab3Paint/obj/Debug/net9.0/ComputerGraphicsLab3Paint.AssemblyInfoInputs.cache
 /home/actuallynotbillgates/Documents/ComputerGraphicsLab3Paint/obj/Debug/net9.0/ComputerGraphicsLab3Paint.AssemblyInfo.cs
 /home/actuallynotbillgates/Documents/ComputerGraphicsLab3Paint/obj/Debug/net9.0/ComputerGraphicsLab3Paint.csproj.CoreCompileInputs.cache
+/home/actuallynotbillgates/Documents/ComputerGraphicsLab3Paint/obj/Debug/net9.0/ComputerGraphicsLab3Paint.sourcelink.json
 /home/actuallynotbillgates/Documents/ComputerGraphicsLab3Paint/obj/Debug/net9.0/Avalonia/ComputerGraphicsLab3Paint.dll
 /home/actuallynotbillgates/Documents/ComputerGraphicsLab3Paint/obj/Debug/net9.0/Avalonia/ComputerGraphicsLab3Paint.pdb
 /home/actuallynotbillgates/Documents/ComputerGraphicsLab3Paint/obj/Debug/net9.0/refint/Avalonia/ComputerGraphicsLab3Paint.dll
